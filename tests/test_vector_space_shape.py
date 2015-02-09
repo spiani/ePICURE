@@ -65,7 +65,7 @@ def evaluate_vector_space(vs):
     check(np.shape(matrix_element(y)), np.shape(matrix_c[0])+np.shape(y) )
     
 def test_vector_spaces():
-    vs = VectorSpace();
+    vs = DummyVectorSpace();
     evaluate_vector_space(vs)
     vs = UniformLagrangeVectorSpace(2)
     evaluate_vector_space(vs)

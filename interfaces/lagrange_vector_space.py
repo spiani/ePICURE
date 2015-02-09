@@ -1,25 +1,26 @@
 import numpy as np
 from scipy.interpolate import lagrange
-from interfaces.vector_space import VectorSpace
+from interfaces.vector_space import MonodimensionalVectorSpace
 
-class LagrangeVectorSpace(VectorSpace):
+class LagrangeVectorSpace(MonodimensionalVectorSpace):
     """A python interface used to describe *one dimensional lagrange basis functions
     functions* on the interval given by the first and last interpolation point. 
     """
     def __init__(self, qpoints, continuous=True):
         """Generates the lagrange basis functions based on the given quadrature points.
         """
-        self.n_dofs = len(qpoints)
+        n_dofs = len(qpoints)
         if continuous:
-            assert self.n_dofs > 1, \
+            assert n_dofs > 1, \
               'We can only have continuous functions if we have at least 2 n_dofs!'
-            self.n_dofs_per_end_point = 1
+            n_dofs_per_end_point = 1
         else:
-            self.n_dofs_per_end_point = 0
-        self.n_cells = 1
-        self.cells = np.array([qpoints[0], qpoints[-1]])
+            n_dofs_per_end_point = 0
+        cells = np.array([qpoints[0], qpoints[-1]])
+        super(LagrangeVectorSpace, self).__init__(cells, n_dofs,
+						  n_dofs_per_end_point)
         self.qpoints = qpoints
-        self.degree = self.n_dofs-1
+        self.degree = n_dofs-1
 
     def basis(self, i):
         self.check_index(i)
@@ -34,6 +35,10 @@ class LagrangeVectorSpace(VectorSpace):
     def cell_span(self, i):
         assert i==0, 'We only have one cell!'
         return range(self.n_dofs)
+      
+    def basis_span(self, i):
+        self.check_index(i)
+        return (0, 1)
 
 class UniformLagrangeVectorSpace(LagrangeVectorSpace):
     """A python interface used to describe *one dimensional lagrange basis functions

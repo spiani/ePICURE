@@ -1,15 +1,12 @@
 import numpy as np
-from interfaces.vector_space import VectorSpace
+from interfaces.vector_space import MonodimensionalVectorSpace
 from utilities._Bas import basisfuns, dersbasisfuns, findspan
 
-class BsplineVectorSpace(VectorSpace):
+class BsplineVectorSpace(MonodimensionalVectorSpace):
     """A python interface used to describe *one dimensional Bspline basis
-    functions* onthe interval given by the first and last knot.
-
-    The base class constructs the constant vector space.
+    functions* on the interval given by the first and last knot.
     """
     def __init__(self, degree=0, knots=[0., 1.]):
-        """ Pure interface class. It generates the constant on [0,1] if no arguments are provided. """
         assert degree >= 0
         assert len(knots) > 1
         assert knots[0] != knots[-1]
@@ -21,10 +18,10 @@ class BsplineVectorSpace(VectorSpace):
         self.mults = self.compute_mults(self.knots)
 
         assert ( self.n_knots - (self.degree + 1) ) > 0
-        self.n_dofs = self.n_knots - (self.degree + 1)
+        n_dofs = self.n_knots - (self.degree + 1)
 
-        self.n_cells = len(self.cells) - 1
-        self.n_dofs_per_end_point = 1
+        super(BsplineVectorSpace, self).__init__(self.cells, n_dofs, 1)
+
 
     def compute_mults(self, knots):
         """Compute the multiplicity of each cell boundary, given the original
