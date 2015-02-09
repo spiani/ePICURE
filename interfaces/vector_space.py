@@ -389,9 +389,6 @@ class IteratedVectorSpace(MonodimensionalVectorSpace):
             if b == self.cells[-1]:
                 b += 1
             ids = np.array( (a<=x) & (x<b) )
-            print ids
-            print p[1]
-            print x[ids]
             y[ids] = vs.basis(p[1])(x[ids])
         return y
             
