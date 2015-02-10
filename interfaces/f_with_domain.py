@@ -48,7 +48,7 @@ class FWithDomain(object):
             if not self.is_inside_domain(x):
                 if raise_error:
                     raise OutOfDomainError
-                return 0
+                return 0.
             else:
                 return self._function(x)
         
@@ -61,7 +61,7 @@ class FWithDomain(object):
                 indx = unravel_index(i,x.shape)
                 if self.is_inside_domain(x[indx]):
                     return self._function(x[indx])
-                return 0
+                return 0.
             output = array(map(eval_func,xrange(x.size))).reshape(x.shape) 
             return output
           
@@ -72,7 +72,7 @@ class FWithDomain(object):
             indx = unravel_index(i,variating_indices)
             if self.is_inside_domain(x[indx]):
                 return self._function(x[indx])
-            return 0
+            return 0.
         output = array(map(eval_func,xrange(total_exec)))
         if isinstance(output[0],ndarray):
             variating_indices += output[0].shape

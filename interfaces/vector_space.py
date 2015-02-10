@@ -71,72 +71,33 @@ class VectorSpace(object):
         raise NotImplementedError
 
     def eval(self, c, x, broadcast=0):
-        ### THIS FUNCTION SHALL BE IMPROVED!!!
-        # Now, it is too slow! We need to avoid recursion
-        # from the second block to the first one!!!
-       
-       
-        if c.shape == self._base_shape:
-            def func_ev(i):
-                indx = np.unravel_index(i,c.shape)
-                coeff = c[indx]
-                base_eval = self._basis(indx)(x, broadcast=broadcast)
-                return coeff * base_eval
-            # The original idea for this map was to implement some sort
-            # of multithreading here, but maybe it was not a great idea
-            all_eval = np.array(map(func_ev,xrange(c.size)))
-            return np.sum(all_eval,axis = 0)
+        # Create a matrix of all the e_i evaluations
+        basis = self._basis
+        def func_ev(i):
+            indx = np.unravel_index(i,self._base_shape)
+            base_eval = basis(indx)(x, broadcast=broadcast)
+            return base_eval
+        eval_matrix = np.array(map(func_ev,xrange(self.n_dofs)))
+        eval_matrix = eval_matrix.reshape(self._base_shape + tuple(eval_matrix.shape[1:]) )
         
-        # This is the case when there more indices in C than in the
-        # base
-        elif c.shape[:len(self._base_shape)] == self._base_shape:
-            overindex = c.shape[len(self._base_shape):]
-            eval_iterations = np.prod(overindex)
-            def multi_eval(i):
-                tmp_indx = np.unravel_index(i, overindex)
-                indx = [Ellipsis]
-                indx.extend(tmp_indx)
-                indx = tuple(indx)
-                return self.eval(c[indx], x, broadcast=broadcast)
-            output = np.array(map(multi_eval, xrange(eval_iterations)))
-            if isinstance(output[0],np.ndarray):
-                overindex += output[0].shape
-            return output.reshape(overindex)
-        else:
-            raise ValueError('The input variable c has a shape which is not'
-                             ' compatible with the shape of the basis')
-         
+        # Now perform the sum with the c_i coefficients
+        index_to_sum = range(len(self._base_shape))
+        return np.tensordot(c, eval_matrix, axes=(index_to_sum, index_to_sum))
+    
              
     def eval_der(self, c, d, x, broadcast=0):
         # See eval for some comments that still holds here
-        if c.shape == self._base_shape:
-            def func_ev(i):
-                indx = np.unravel_index(i,c.shape)
-                coeff = c[indx]
-                try:
-                    base_eval = self._basis_der(indx, d)(x, broadcast=broadcast)
-                except OutOfDomainError:
-                    return 0
-                return coeff * base_eval
-            all_eval = np.array(map(func_ev, xrange(c.size)))
-            return np.sum(all_eval, axis = 0)
-        elif c.shape[:len(self._base_shape)] == self._base_shape:
-            overindex = c.shape[len(self._base_shape):]
-            eval_iterations = np.prod(overindex)
-            def multi_eval(i):
-                tmp_indx = np.unravel_index(i, overindex)
-                indx = [Ellipsis]
-                indx.extend(tmp_indx)
-                indx = tuple(indx)
-                return self.eval_der(c[indx], d,  x, broadcast=broadcast)
-            output = np.array(map(multi_eval, xrange(eval_iterations)))
-            if isinstance(output[0],np.ndarray):
-                overindex += output[0].shape
-            return output.reshape(overindex)
-        else:
-            raise ValueError('The input variable c has a shape which is not'
-                             ' compatible with the shape of the basis')
-
+        basis_der = self._basis_der
+        def func_ev(i):
+            indx = np.unravel_index(i,self._base_shape)
+            base_eval = basis_der(indx, d)(x, broadcast=broadcast)
+            return base_eval
+        eval_matrix = np.array(map(func_ev,xrange(self.n_dofs)))
+        eval_matrix = eval_matrix.reshape(self._base_shape + tuple(eval_matrix.shape[1:]) )
+        
+        index_to_sum = range(len(self._base_shape))
+        return np.tensordot(c, eval_matrix, axes=(index_to_sum, index_to_sum))
+        
         
     def element(self, c, broadcast=0):
         """VectorSpace.element(c): a callable function,
@@ -182,7 +143,7 @@ class MonodimensionalVectorSpace(VectorSpace):
         # in the old form (as it is returned from basis), create a
         # cell object for that function and returns it in the form
         # of a FWithDomain istance
-                
+
         # All we have to do is add a domain to the function
         assert i < self._base_shape, "Wrong base dimension!"
         func = self.basis(i[0])
