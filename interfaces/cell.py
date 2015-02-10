@@ -1,6 +1,17 @@
 import numpy as np
 from collections import Iterable
 
+def ensure_array(P):
+    """Ensure that a value is a numpy array; if it is any other sort
+    of iterable, it is changed in a numpy array; if it is a not an
+    iterable object, it is wrapped inside a numpy array"""
+    if not isinstance(P, np.ndarray):
+        if not isinstance(P, Iterable):
+            P = np.array((P,))
+        else:
+            P = np.array(P)
+    return P
+
 class Cell(object):
     """A cell is a subset of Rn that has just a pourpose: tell if
     an array is or not inside the cell"""
@@ -34,6 +45,8 @@ class Rectangle(Cell):
     top one. The border is also part of the cell"""
     
     def __init__(self, lb_corner, rt_corner):
+        lb_corner = ensure_array(lb_corner)
+        rt_corner = ensure_array(rt_corner)
         assert lb_corner.shape == rt_corner.shape, \
             "lb_corner and rt_corner should have the same dimension"
         assert lb_corner.shape == (len(lb_corner),), \
@@ -48,19 +61,13 @@ class Rectangle(Cell):
         return len(self._lb_corner)
     
     def is_inside(self, P):
-        # Ensure that P is an array
-        if not isinstance(P,np.ndarray):
-            if not isinstance(P,Iterable):
-                P = np.array((P,))
-            else:
-                P = np.array(P)
-       
-        assert P.shape == self._lb_corner.shape, \
-                      "P dimension is wrong!"                        
+        P = ensure_array(P)
+        if self.get_space_dimension() == 1 and P.shape[-1] != 1:
+            P = np.expand_dims(P,-1)
+        assert P.shape[-1] == self._lb_corner.shape[0], \
+                      "P dimension is wrong (" + str(P.shape[-1]) +")!"                        
 
-        if np.all(P>=self._lb_corner) and np.all(P<=self._rt_corner):
-            return True
-        return False
+        return np.all(P>=self._lb_corner, axis=-1) * np.all(P<=self._rt_corner, axis=-1)
     
 
 class CellProduct(Cell):

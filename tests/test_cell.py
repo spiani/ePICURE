@@ -1,7 +1,7 @@
 from nose.tools import assert_raises
 
 from interfaces.cell import *
-from numpy import array, zeros
+from numpy import array, zeros, array_equal
 from numpy.random import rand, seed, randint
 
 
@@ -68,6 +68,14 @@ def test_cell_rectangle_border_inside():
         R = Rectangle(lb_cor, rt_cor)
         point = lb_cor + diff*randint(0,2,i)
         assert R.is_inside(point) == True
+
+def test_cell_rectangle_broadcast():
+    lb_cor = array([-7,2,0])
+    rt_cor = array([2,5,1])
+    a = array([[(1,3,1),(1,1,1),(0,3,0)],[(3,3,0),(0.1,2.1,.1),(3,1,.1)]])
+    R = Rectangle(lb_cor, rt_cor)
+    assert array_equal(R.is_inside(a), array([[True, False, True], [False, True, False]]))
+    
 
 def test_cell_product1():
     R1 = Rectangle(array([1,1]), array([2,2]))

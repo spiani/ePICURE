@@ -16,8 +16,8 @@ def test_vector_space_interface():
 
 def test_vector_space_c_overshaped():
     vs = DoubleLineVectorSpace()
-    c = array( ([(1,2), (2,4)],
-                [(3,6), (4,8)])  )
+    c = array( ([(1.,2.), (2.,4.)],
+                [(3.,6.), (4.,8.)])  )
     f = vs.element(c)
     assert eq( f(array((0,0))), (1,2))
     assert eq( f(array((1,0))), (1+3, 2+6))
@@ -28,11 +28,11 @@ def test_vector_space_c_overshaped_broadcast():
     vs = DoubleLineVectorSpace()
     c = array( ([(1,2), (2,4)],
                 [(3,6), (4,8)])  )
-    f = vs.element(c, broadcast=0)
+    f = vs.element(c)
     assert eq( f(array((1,0))), (1+3, 2+6))
     assert eq( f(array((0,1))), (1+2, 2+4))
     assert eq( f(array((1,1))), (1+2+3+4, 2+4+6+8))
-    f = vs.element(c, broadcast=1)
+    f = vs.element(c)
     assert eq( f(array([(0,0),(1,1)])), ((1,10),(2,20)))
 
 
@@ -60,6 +60,7 @@ def test_vector_space_c_overshaped_derivate():
     c = array( ([(1,2), (2,4)],
                 [(3,6), (4,8)])  )
     f = vs.element_der(c,(1,1))
+    print f(array((0,0)))
     assert eq( f(array((0,0))), (4, 8))
     assert eq( f(array((1,0))), (4, 8))
     assert eq( f(array((0,1))), (4, 8))

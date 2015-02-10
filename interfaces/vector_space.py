@@ -70,14 +70,21 @@ class VectorSpace(object):
         # means derive respect to y
         raise NotImplementedError
 
-    def eval(self, c, x, broadcast=0):
+    def eval(self, c, x):
         # Create a matrix of all the e_i evaluations
         basis = self._basis
         def func_ev(i):
             indx = np.unravel_index(i,self._base_shape)
-            base_eval = basis(indx)(x, broadcast=broadcast)
+            base_eval = basis(indx)(x)
             return base_eval
-        eval_matrix = np.array(map(func_ev,xrange(self.n_dofs)))
+        eval_matrix = [np.array(i) for i in map(func_ev,xrange(self.n_dofs))]
+        if isinstance(eval_matrix[0],np.ndarray):
+            if len(eval_matrix)==len([i for i in eval_matrix if i.dtype==np.int]):
+                eval_matrix = np.array(eval_matrix, dtype=np.int)
+            else:
+                eval_matrix = np.array(eval_matrix, dtype=np.float)
+        else:
+            eval_matrix = np.array(eval_matrix)
         eval_matrix = eval_matrix.reshape(self._base_shape + tuple(eval_matrix.shape[1:]) )
         
         # Now perform the sum with the c_i coefficients
@@ -85,33 +92,40 @@ class VectorSpace(object):
         return np.tensordot(c, eval_matrix, axes=(index_to_sum, index_to_sum))
     
              
-    def eval_der(self, c, d, x, broadcast=0):
+    def eval_der(self, c, d, x):
         # See eval for some comments that still holds here
         basis_der = self._basis_der
         def func_ev(i):
             indx = np.unravel_index(i,self._base_shape)
-            base_eval = basis_der(indx, d)(x, broadcast=broadcast)
+            base_eval = basis_der(indx, d)(x)
             return base_eval
-        eval_matrix = np.array(map(func_ev,xrange(self.n_dofs)))
+        eval_matrix = [np.array(i) for i in map(func_ev,xrange(self.n_dofs))]
+        if isinstance(eval_matrix[0],np.ndarray):
+            if len(eval_matrix) == len([i for i in eval_matrix if i.dtype==np.int]):
+                eval_matrix = np.array(eval_matrix, dtype=np.int)
+            else:
+               eval_matrix = np.array(eval_matrix, dtype=np.float)
+        else:
+            eval_matrix = np.array(eval_matrix)
         eval_matrix = eval_matrix.reshape(self._base_shape + tuple(eval_matrix.shape[1:]) )
         
         index_to_sum = range(len(self._base_shape))
         return np.tensordot(c, eval_matrix, axes=(index_to_sum, index_to_sum))
         
         
-    def element(self, c, broadcast=0):
+    def element(self, c):
         """VectorSpace.element(c): a callable function,
         representing sum(c[i,j,...] * basis[i,j,...]) """
-        return lambda x: self.eval(c,x, broadcast)
+        return lambda x: self.eval(c,x)
 
-    def element_der(self, c, d, broadcast=0):
+    def element_der(self, c, d):
         """VectorSpace.element_der(c): a callable function,
         representing sum(c[i,j,...] * D(basis[i,j,...])).
         d shall be passed as a tuple. Every index is the number
         of times that derivation will be performed on the variabile
         of place index. For example (1,2,0) means "derive on time for
         x and two times for y"""
-        return lambda x: self.eval_der(c, d, x, broadcast=broadcast)        
+        return lambda x: self.eval_der(c, d, x)        
     
 
 
@@ -166,20 +180,16 @@ class MonodimensionalVectorSpace(VectorSpace):
                               np.array((borders[1],)))
         return FWithDomain(func, rect_cell)
 
-    def eval(self, c, x, broadcast=-1):
-        assert broadcast==-1, \
-            "In the monodimensional vector space, the broadcast must be -1"
+    def eval(self, c, x):
         MVS=MonodimensionalVectorSpace
-        return super(MVS, self).eval(c, x, broadcast=-1)
+        return super(MVS, self).eval(c, x)
 
 
-    def eval_der(self, c, d, x, broadcast=-1):
-        assert broadcast==-1, \
-            "In the monodimensional vector space, the broadcast must be -1"
+    def eval_der(self, c, d, x):
         MVS=MonodimensionalVectorSpace
         if not isinstance(d,Iterable):
             d = (d,)
-        return super(MVS, self).eval_der(c, d, x, broadcast=-1)
+        return super(MVS, self).eval_der(c, d, x)
 
     def element(self, c):
         """VectorSpace.element(c): a callable function,
@@ -350,6 +360,7 @@ class IteratedVectorSpace(MonodimensionalVectorSpace):
             if b == self.cells[-1]:
                 b += 1
             ids = np.array( (a<=x) & (x<b) )
+            print x
             y[ids] = vs.basis(p[1])(x[ids])
         return y
             
@@ -421,7 +432,7 @@ class DummyVectorSpace(MonodimensionalVectorSpace):
         return (0,1)
 
     def cell_span(self, i):
-        return [0]    
+        return [0]
 
 
 class DoubleLineVectorSpace(VectorSpace):
@@ -437,16 +448,20 @@ class DoubleLineVectorSpace(VectorSpace):
         assert i < self._base_shape
         if i == (0,0):
             def func(x):
-                return 1
+                output_size = np.prod(x.shape[:-1])
+                output = np.ones(output_size)
+                if output_size > 1:
+                    output = output.reshape(x.shape[:-1])
+                return output
         if i == (1,0):
             def func(x):
-                return x[0]
+                return x[Ellipsis,0]
         if i == (0,1):
             def func(x):
-                return x[1]
+                return x[Ellipsis,1]
         if i == (1,1):
             def func(x):
-                return x[0]*x[1]
+                return np.prod(x,axis=-1)
         return FWithDomain(func, self._square)
 
     def _basis_der(self, i, d):
@@ -454,7 +469,15 @@ class DoubleLineVectorSpace(VectorSpace):
         assert len(d)==2
         new_index = tuple([i[j] - d[j] for j in range(2)])
         if new_index[0]<0 or new_index[1]<0:
-            return FWithDomain(lambda x: 0, self._square)
+            def func(x):
+                output_size = np.prod(x.shape[:-1])
+                output = np.zeros(output_size)
+                if output.size == 1:
+                    return 0.
+                if output_size > 1:
+                    output = output.reshape(x.shape[:-1])
+                return output            
+            return FWithDomain(func , self._square)
         else:
             return self._basis(new_index)
 
