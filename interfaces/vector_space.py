@@ -1,7 +1,7 @@
 import numpy as np
 from collections import Iterable
 
-from interfaces.cell import Rectangle
+from interfaces.cell import Rectangle, AllRealNumbersCell
 from interfaces.f_with_domain import FWithDomain, OutOfDomainError
 
 class VectorSpace(object):
@@ -164,6 +164,7 @@ class MonodimensionalVectorSpace(VectorSpace):
         borders = self.basis_span(i[0])
         rect_cell = Rectangle(np.array((borders[0],)), 
                               np.array((borders[1],)))
+        rect_cell=AllRealNumbersCell()   ######
         return FWithDomain(func, rect_cell)
 
     def basis_der(self, i, d):
@@ -178,6 +179,7 @@ class MonodimensionalVectorSpace(VectorSpace):
         borders = self.basis_span(i[0])
         rect_cell = Rectangle(np.array((borders[0],)), 
                               np.array((borders[1],)))
+        rect_cell=AllRealNumbersCell() ######
         return FWithDomain(func, rect_cell)
 
     def eval(self, c, x):
@@ -360,7 +362,6 @@ class IteratedVectorSpace(MonodimensionalVectorSpace):
             if b == self.cells[-1]:
                 b += 1
             ids = np.array( (a<=x) & (x<b) )
-            print x
             y[ids] = vs.basis(p[1])(x[ids])
         return y
             
@@ -476,7 +477,7 @@ class DoubleLineVectorSpace(VectorSpace):
                     return 0.
                 if output_size > 1:
                     output = output.reshape(x.shape[:-1])
-                return output            
+                return output
             return FWithDomain(func , self._square)
         else:
             return self._basis(new_index)

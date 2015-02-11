@@ -70,6 +70,21 @@ class Rectangle(Cell):
         return np.all(P>=self._lb_corner, axis=-1) * np.all(P<=self._rt_corner, axis=-1)
     
 
+class AllRealNumbersCell(Cell):
+    """Every real number is inside this class"""
+    def get_space_dimension(self):
+        return 1
+        
+    def is_inside(self, P):
+        P = ensure_array(P)
+        if P.size == 1:
+            return True
+        output_shape = P.shape
+        output = np.full(output_shape, True)
+        return output
+
+
+
 class CellProduct(Cell):
     """A cell product is a new cell in space R(n+m) constructed starting
     from two (or more) cells in Rn and Rm. A point P=[a1,...,an,b1,...,bm]
